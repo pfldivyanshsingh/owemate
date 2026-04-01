@@ -53,6 +53,7 @@ const addExpense = async (req, res) => {
         amount: parseFloat(amount),
         date,
         paid_by,
+        added_by: addedById,
         category_id,
         split_method: split_method || 'equal',
         notes,
@@ -197,12 +198,20 @@ const updateExpense = async (req, res) => {
 const deleteExpense = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
 
     const { data: expense } = await supabase
       .from('expenses')
-      .select('id, group_id')
+      .select('id, group_id, added_by, paid_by')
       .eq('id', id)
       .single();
+
+    if (!expense) return res.status(404).json({ error: 'Expense not found' });
+
+    // Check if the user is the one who added the expense
+    if ((expense.added_by && expense.added_by !== userId) || (!expense.added_by && expense.paid_by !== userId)) {
+      return res.status(403).json({ error: 'Only the person who added this expense can delete it' });
+    }
 
     await supabase.from('expense_splits').delete().eq('expense_id', id);
     await supabase.from('expenses').delete().eq('id', id);

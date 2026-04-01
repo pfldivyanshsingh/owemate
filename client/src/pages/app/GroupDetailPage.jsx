@@ -494,7 +494,7 @@ export default function GroupDetailPage() {
                   <p style={{ fontFamily: 'Manrope', fontWeight: 900, fontSize: '1.25rem', color: 'var(--text-primary)' }}>
                     ₹{parseFloat(expense.amount).toLocaleString('en-IN')}
                   </p>
-                  {(isAdmin || expense.paid_by === user.id) && (
+                  {(isAdmin || (expense.added_by ? expense.added_by === user.id : expense.paid_by === user.id)) && (
                     <button onClick={() => handleDeleteExpense(expense.id)} style={{ padding: '0.5rem', borderRadius: '10px', background: 'var(--surface-1)', border: 'none', color: 'var(--tertiary)', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'} onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-1)'}>
                       <Trash2 size={16} />
                     </button>
