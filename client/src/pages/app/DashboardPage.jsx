@@ -77,7 +77,9 @@ export default function DashboardPage() {
           combinedBalance: (d.totalOwedToMe - d.totalIOwe) + (p.netBalance || 0),
           monthlySpend: d.monthlyData || [],
           groups: fetchedGroups,
-          recentExpenses: fetchedExpenses.sort((a,b) => new Date(b.date) - new Date(a.date))
+          recentExpenses: fetchedExpenses.sort((a,b) => new Date(b.date) - new Date(a.date)),
+          owedDetails: d.owedDetails || [],
+          iOweDetails: d.iOweDetails || [],
         });
         
         if (socket && fetchedGroups.length > 0) {
@@ -155,6 +157,69 @@ export default function DashboardPage() {
         <StatCard icon={Wallet} label="Personal Balance" amount={data?.personalBalance || 0} color="#5d4037" bg="rgba(93,64,55,0.1)" delay="0.14s" />
         <StatCard icon={Landmark} label="Total Spend" amount={data?.totalEcosystemSpend || 0} color="#1a6aff" bg="rgba(26,106,255,0.1)" delay="0.21s" />
       </div>
+
+      {/* Pending Settlements / Breakdown */}
+      {(data?.owedDetails?.length > 0 || data?.iOweDetails?.length > 0) && (
+        <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          {/* People who owe you */}
+          {data?.owedDetails?.length > 0 && (
+            <div className="animate-fadeInUp delay-200" style={{ background: 'white', borderRadius: 20, border: '1px solid var(--border-subtle)', padding: '1.5rem', boxShadow: '0 2px 8px rgba(15,28,21,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(10,135,84,0.1)', color: '#0a8754', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TrendingUp size={16} />
+                </div>
+                <h2 style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>People owe you</h2>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {data.owedDetails.map((od, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--surface-1)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <img src={od.user?.avatar_url || `https://ui-avatars.com/api/?name=${od.user?.name || 'User'}&background=005538&color=fff`} alt="" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+                      <div>
+                        <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{od.user?.name}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>From {od.details.length} expense(s)</p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '1rem', color: '#0a8754' }}>₹{od.totalAmount.toLocaleString('en-IN')}</p>
+                      <Link to={`/groups/${od.details[0]?.groupId}`} style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>Settle Up</Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* People you owe */}
+          {data?.iOweDetails?.length > 0 && (
+            <div className="animate-fadeInUp delay-200" style={{ background: 'white', borderRadius: 20, border: '1px solid var(--border-subtle)', padding: '1.5rem', boxShadow: '0 2px 8px rgba(15,28,21,0.05)', gridColumn: data?.owedDetails?.length === 0 ? '1 / -1' : 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(186,26,26,0.1)', color: '#ba1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TrendingDown size={16} />
+                </div>
+                <h2 style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>You owe people</h2>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {data.iOweDetails.map((io, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--surface-1)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <img src={io.user?.avatar_url || `https://ui-avatars.com/api/?name=${io.user?.name || 'User'}&background=c0392b&color=fff`} alt="" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+                      <div>
+                        <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{io.user?.name}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>From {io.details.length} expense(s)</p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '1rem', color: '#c0392b' }}>₹{io.totalAmount.toLocaleString('en-IN')}</p>
+                      <Link to={`/groups/${io.details[0]?.groupId}`} style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>Pay Now</Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Chart + Groups grid */}
       <div className="flex flex-col-reverse lg:grid lg:grid-cols-[1fr_380px] gap-6 mb-6 items-start">

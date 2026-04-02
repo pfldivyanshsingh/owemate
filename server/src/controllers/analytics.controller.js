@@ -38,31 +38,67 @@ const getMyAnalytics = async (req, res) => {
     }
 
     // Total owed to me
-    const { data: owedSplits } = await supabase
+    const { data: owedSplits, error: err1 } = await supabase
       .from('expense_splits')
-      .select('amount, expense:expenses(paid_by)')
+      .select('id, amount, user:users(id, name, avatar_url), expense:expenses(paid_by, title, date, group_id, group:groups(name))')
       .eq('is_settled', false)
       .neq('user_id', userId);
 
-    const totalOwedToMe = (owedSplits || [])
-      .filter((s) => s.expense?.paid_by === userId)
-      .reduce((sum, s) => sum + parseFloat(s.amount), 0);
+    const owedDetailsRaw = (owedSplits || []).filter((s) => s.expense?.paid_by === userId);
+    
+    // Group them by user who owes me
+    const owedByUsers = {};
+    for (const split of owedDetailsRaw) {
+      if (!split.user) continue;
+      const uid = split.user.id;
+      if (!owedByUsers[uid]) owedByUsers[uid] = { user: split.user, totalAmount: 0, details: [] };
+      owedByUsers[uid].totalAmount += parseFloat(split.amount);
+      owedByUsers[uid].details.push({
+        id: split.id,
+        amount: parseFloat(split.amount),
+        title: split.expense?.title,
+        groupName: split.expense?.group?.name,
+        groupId: split.expense?.group_id,
+        date: split.expense?.date
+      });
+    }
+    const owedDetails = Object.values(owedByUsers);
+    const totalOwedToMe = owedDetailsRaw.reduce((sum, s) => sum + parseFloat(s.amount), 0);
 
     // Total I owe
-    const { data: iOweSplits } = await supabase
+    const { data: iOweSplits, error: err2 } = await supabase
       .from('expense_splits')
-      .select('amount, expense:expenses(paid_by)')
+      .select('id, amount, expense:expenses(paid_by, title, date, group_id, group:groups(name), paid_by_user:users!expenses_paid_by_fkey(id, name, avatar_url))')
       .eq('user_id', userId)
       .eq('is_settled', false);
 
-    const totalIOwe = (iOweSplits || [])
-      .filter((s) => s.expense?.paid_by !== userId)
-      .reduce((sum, s) => sum + parseFloat(s.amount), 0);
+    const iOweDetailsRaw = (iOweSplits || []).filter((s) => s.expense?.paid_by !== userId);
+    
+    // Group them by user I owe
+    const iOweUsers = {};
+    for (const split of iOweDetailsRaw) {
+      if (!split.expense || !split.expense.paid_by_user) continue;
+      const uid = split.expense.paid_by_user.id;
+      if (!iOweUsers[uid]) iOweUsers[uid] = { user: split.expense.paid_by_user, totalAmount: 0, details: [] };
+      iOweUsers[uid].totalAmount += parseFloat(split.amount);
+      iOweUsers[uid].details.push({
+        id: split.id,
+        amount: parseFloat(split.amount),
+        title: split.expense?.title,
+        groupName: split.expense?.group?.name,
+        groupId: split.expense?.group_id,
+        date: split.expense?.date
+      });
+    }
+    const iOweDetails = Object.values(iOweUsers);
+    const totalIOwe = iOweDetailsRaw.reduce((sum, s) => sum + parseFloat(s.amount), 0);
 
     res.json({
       totalPaid: parseFloat(totalPaid.toFixed(2)),
       totalOwedToMe: parseFloat(totalOwedToMe.toFixed(2)),
       totalIOwe: parseFloat(totalIOwe.toFixed(2)),
+      owedDetails,
+      iOweDetails,
       netBalance: parseFloat((totalOwedToMe - totalIOwe).toFixed(2)),
       monthlyData: Object.entries(monthlyData)
         .sort(([a], [b]) => a.localeCompare(b))
