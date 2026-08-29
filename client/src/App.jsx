@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 
@@ -102,6 +103,7 @@ function App() {
               error: { iconTheme: { primary: '#ba1a1a', secondary: '#fff' } },
             }}
           />
+          <Analytics />
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
